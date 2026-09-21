@@ -71,11 +71,284 @@
         window.addEventListener('resize', () => { resize(); createStars(); });
     }
 
+    /* ─── Coordinate Formatting & Parsing ────────────────────── */
+    function formatLat(lat) {
+        const dir = lat >= 0 ? 'N' : 'S';
+        return `${Math.abs(lat).toFixed(2)}° ${dir}`;
+    }
+
+    function formatLon(lon) {
+        const dir = lon >= 0 ? 'E' : 'W';
+        return `${Math.abs(lon).toFixed(2)}° ${dir}`;
+    }
+
+    function formatCoords(lat, lon) {
+        return `${formatLat(lat)}, ${formatLon(lon)}`;
+    }
+
+    function parseLat(str) {
+        if (typeof str === 'number') return Math.max(-90, Math.min(90, str));
+        if (!str || typeof str !== 'string') return null;
+        const clean = str.trim().toUpperCase();
+        const isSouth = clean.includes('S') || clean.startsWith('-');
+        const num = parseFloat(clean.replace(/[^0-9.]/g, ''));
+        if (isNaN(num)) return null;
+        const val = isSouth ? -num : num;
+        return Math.max(-90, Math.min(90, val));
+    }
+
+    function parseLon(str) {
+        if (typeof str === 'number') return Math.max(-180, Math.min(180, str));
+        if (!str || typeof str !== 'string') return null;
+        const clean = str.trim().toUpperCase();
+        const isWest = clean.includes('W') || clean.startsWith('-');
+        const num = parseFloat(clean.replace(/[^0-9.]/g, ''));
+        if (isNaN(num)) return null;
+        const val = isWest ? -num : num;
+        return Math.max(-180, Math.min(180, val));
+    }
+
+    /* ─── Map & Pinpoint Engine ─────────────────────────────── */
+    let locationMap = null;
+    let locationMarker = null;
+
+    function updateCoordinates(lat, lon, moveMap = true, lookupTz = true) {
+        lat = Math.max(-90, Math.min(90, lat));
+        lon = Math.max(-180, Math.min(180, lon));
+
+        const latInput = $('#input-latitude');
+        const lonInput = $('#input-longitude');
+        const latStrInput = $('#input-latitude-str');
+        const lonStrInput = $('#input-longitude-str');
+        const badgeText = $('#badge-coords-text');
+
+        if (latInput) latInput.value = lat.toFixed(4);
+        if (lonInput) lonInput.value = lon.toFixed(4);
+        if (latStrInput) latStrInput.value = formatLat(lat);
+        if (lonStrInput) lonStrInput.value = formatLon(lon);
+        if (badgeText) badgeText.textContent = formatCoords(lat, lon);
+
+        if (locationMarker) {
+            locationMarker.setLatLng([lat, lon]);
+        }
+        if (moveMap && locationMap) {
+            locationMap.panTo([lat, lon]);
+        }
+        if (lookupTz) {
+            lookupTimezoneForCoords(lat, lon);
+        }
+    }
+
+    async function lookupTimezoneForCoords(lat, lon) {
+        try {
+            const dateVal = $('#input-date') ? $('#input-date').value : '';
+            const timeVal = $('#input-time') ? $('#input-time').value : '';
+            let url = `/api/v1/charts/timezone-lookup?latitude=${lat}&longitude=${lon}`;
+            if (dateVal) url += `&date=${dateVal}`;
+            if (timeVal) url += `&time=${timeVal}`;
+
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                const tzSelect = $('#input-timezone');
+                if (tzSelect && data.utc_offset !== undefined) {
+                    const targetOffset = data.utc_offset;
+                    let bestOpt = null;
+                    let minDiff = Infinity;
+                    for (const opt of tzSelect.options) {
+                        const diff = Math.abs(parseFloat(opt.value) - targetOffset);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestOpt = opt;
+                        }
+                    }
+                    if (bestOpt && minDiff <= 0.1) {
+                        tzSelect.value = bestOpt.value;
+                    }
+                }
+            }
+        } catch { /* optional */ }
+    }
+
+    function initLocationMap() {
+        const mapEl = $('#birth-location-map');
+        if (!mapEl || typeof L === 'undefined') return;
+        if (locationMap) return;
+
+        const defaultLat = 28.6139;
+        const defaultLng = 77.2090;
+
+        locationMap = L.map('birth-location-map', {
+            center: [defaultLat, defaultLng],
+            zoom: 5,
+            zoomControl: true,
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 18,
+        }).addTo(locationMap);
+
+        const celestialIcon = L.divIcon({
+            className: 'custom-celestial-pin',
+            html: '<div class="pin-pulse"></div><div class="pin-core"></div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+        });
+
+        locationMarker = L.marker([defaultLat, defaultLng], {
+            icon: celestialIcon,
+            draggable: true,
+        }).addTo(locationMap);
+
+        locationMarker.on('dragend', (e) => {
+            const pos = e.target.getLatLng();
+            updateCoordinates(pos.lat, pos.lng, false, true);
+        });
+
+        locationMap.on('click', (e) => {
+            updateCoordinates(e.latlng.lat, e.latlng.lng, true, true);
+        });
+
+        updateCoordinates(defaultLat, defaultLng, false, false);
+    }
+
+    function initPlaceSearch() {
+        const searchInput = $('#input-place-search');
+        const btnSearch = $('#btn-search-place');
+        const btnClear = $('#btn-clear-place');
+        const suggestionsList = $('#place-suggestions');
+
+        if (!searchInput) return;
+
+        let debounceTimer = null;
+
+        async function performSearch(query) {
+            if (!query || query.trim().length < 2) {
+                suggestionsList.style.display = 'none';
+                suggestionsList.innerHTML = '';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/v1/charts/geo-search?q=${encodeURIComponent(query.trim())}`);
+                if (!res.ok) return;
+                const places = await res.json();
+                renderSuggestions(places);
+            } catch (err) {
+                console.warn('Place search error:', err);
+            }
+        }
+
+        function renderSuggestions(places) {
+            if (!places || places.length === 0) {
+                suggestionsList.style.display = 'none';
+                suggestionsList.innerHTML = '';
+                return;
+            }
+
+            suggestionsList.innerHTML = places.map((p, i) => `
+                <li class="place-suggestion-item" data-index="${i}">
+                    <span class="place-item-name">${escHtml(p.short_name)}</span>
+                    <span class="place-item-coords">📍 Decimal Coordinates: ${escHtml(p.formatted_coordinates)}</span>
+                </li>
+            `).join('');
+
+            suggestionsList.style.display = 'block';
+
+            suggestionsList.querySelectorAll('.place-suggestion-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const idx = parseInt(item.dataset.index);
+                    const place = places[idx];
+                    if (place) {
+                        selectPlace(place);
+                    }
+                });
+            });
+        }
+
+        function selectPlace(place) {
+            searchInput.value = place.short_name;
+            suggestionsList.style.display = 'none';
+            if (btnClear) btnClear.style.display = 'inline-block';
+
+            if (locationMap) {
+                locationMap.flyTo([place.latitude, place.longitude], 10, { duration: 1.2 });
+            }
+            updateCoordinates(place.latitude, place.longitude, false, true);
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (btnClear) btnClear.style.display = val ? 'inline-block' : 'none';
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => performSearch(val), 350);
+        });
+
+        if (btnSearch) {
+            btnSearch.addEventListener('click', () => {
+                performSearch(searchInput.value);
+            });
+        }
+
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                searchInput.value = '';
+                btnClear.style.display = 'none';
+                suggestionsList.style.display = 'none';
+                searchInput.focus();
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.place-search-container')) {
+                suggestionsList.style.display = 'none';
+            }
+        });
+
+        const latStrInput = $('#input-latitude-str');
+        const lonStrInput = $('#input-longitude-str');
+
+        if (latStrInput) {
+            latStrInput.addEventListener('change', () => {
+                const parsed = parseLat(latStrInput.value);
+                const currentLon = parseLon($('#input-longitude-str') ? $('#input-longitude-str').value : '77.21° E') ?? 77.2090;
+                if (parsed !== null) {
+                    updateCoordinates(parsed, currentLon, true, true);
+                } else {
+                    latStrInput.value = formatLat(parseFloat($('#input-latitude').value) || 28.6139);
+                }
+            });
+        }
+
+        if (lonStrInput) {
+            lonStrInput.addEventListener('change', () => {
+                const currentLat = parseLat($('#input-latitude-str') ? $('#input-latitude-str').value : '28.61° N') ?? 28.6139;
+                const parsed = parseLon(lonStrInput.value);
+                if (parsed !== null) {
+                    updateCoordinates(currentLat, parsed, true, true);
+                } else {
+                    lonStrInput.value = formatLon(parseFloat($('#input-longitude').value) || 77.2090);
+                }
+            });
+        }
+    }
+
     /* ─── Step Navigation ───────────────────────────────────── */
     function showStep(step) {
         [stepSystem, stepDetails, stepResults].forEach(s => s.classList.remove('active-step'));
         step.classList.add('active-step');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if (step === stepDetails) {
+            setTimeout(() => {
+                if (locationMap) {
+                    locationMap.invalidateSize();
+                } else {
+                    initLocationMap();
+                }
+            }, 250);
+        }
     }
 
     /* ─── System Selection ──────────────────────────────────── */
@@ -129,8 +402,15 @@
         const date = $('#input-date').value;
         const time = $('#input-time').value;
         const tz = parseFloat($('#input-timezone').value);
-        const lat = parseFloat($('#input-latitude').value);
-        const lng = parseFloat($('#input-longitude').value);
+
+        // Parse coordinates from decimal directional format
+        const latStr = $('#input-latitude-str') ? $('#input-latitude-str').value : '';
+        const lngStr = $('#input-longitude-str') ? $('#input-longitude-str').value : '';
+        let lat = parseLat(latStr);
+        let lng = parseLon(lngStr);
+        if (lat === null) lat = parseFloat($('#input-latitude').value);
+        if (lng === null) lng = parseFloat($('#input-longitude').value);
+
         const focus = $('#input-focus').value;
 
         if (!date || !time || isNaN(lat) || isNaN(lng)) {
@@ -459,5 +739,7 @@
 
     /* ─── Initialize ────────────────────────────────────────── */
     initStarCanvas();
+    initLocationMap();
+    initPlaceSearch();
 
 })();

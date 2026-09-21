@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -165,14 +166,55 @@
                     </div>
                 </div>
 
-                <div class="form-row form-row-2">
-                    <div class="form-group">
-                        <label for="input-latitude">Latitude</label>
-                        <input type="number" id="input-latitude" step="0.0001" min="-90" max="90" placeholder="e.g., 28.6139" required>
+                <!-- ── Location & Pinpoint Map Section ────────────── -->
+                <div class="location-section">
+                    <div class="section-label-group">
+                        <label for="input-place-search">Birth Place / City (Optional)</label>
+                        <span class="field-hint">If you don't know the exact coordinates, search your birth city/town or click on the map to pinpoint.</span>
                     </div>
-                    <div class="form-group">
-                        <label for="input-longitude">Longitude</label>
-                        <input type="number" id="input-longitude" step="0.0001" min="-180" max="180" placeholder="e.g., 77.2090" required>
+
+                    <div class="place-search-container">
+                        <div class="place-search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="input-place-search" placeholder="Type birth city, town, or hospital (e.g., Kolkata, India or London, UK)..." autocomplete="off">
+                            <button type="button" id="btn-clear-place" class="btn-clear-search" style="display:none;" title="Clear search">✕</button>
+                            <button type="button" id="btn-search-place" class="btn-search-action">
+                                <span class="search-btn-text">Pinpoint</span>
+                                <span class="search-btn-loader" style="display:none;">...</span>
+                            </button>
+                        </div>
+                        <ul id="place-suggestions" class="place-suggestions-list" style="display: none;"></ul>
+                    </div>
+
+                    <!-- Interactive Pinpoint Map -->
+                    <div class="map-card-wrapper">
+                        <div id="birth-location-map" class="interactive-map"></div>
+                        <div class="map-overlay-hint">
+                            <span>📍 Click anywhere on map or drag the pin to pinpoint exact birth location</span>
+                        </div>
+                    </div>
+
+                    <!-- Decimal Coordinates (Strict Format: e.g. 23.65° N, 88.13° E) -->
+                    <div class="coordinates-card glass-panel-nested">
+                        <div class="coordinates-live-badge" id="coordinates-badge">
+                            <span class="coord-badge-title">📍 Decimal Coordinates:</span>
+                            <span id="badge-coords-text" class="coord-badge-value">28.61° N, 77.21° E</span>
+                        </div>
+
+                        <div class="form-row form-row-2">
+                            <div class="form-group">
+                                <label for="input-latitude-str">Latitude (Decimal: e.g. 23.65° N)</label>
+                                <input type="text" id="input-latitude-str" placeholder="e.g., 23.65° N" value="28.61° N" required>
+                                <input type="hidden" id="input-latitude" value="28.6139">
+                                <span class="input-subnote">Format: Decimal degrees with N / S (e.g. 23.65° N)</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-longitude-str">Longitude (Decimal: e.g. 88.13° E)</label>
+                                <input type="text" id="input-longitude-str" placeholder="e.g., 88.13° E" value="77.21° E" required>
+                                <input type="hidden" id="input-longitude" value="77.2090">
+                                <span class="input-subnote">Format: Decimal degrees with E / W (e.g. 88.13° E)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -296,6 +338,7 @@
         <p class="footer-disclaimer">For educational and entertainment purposes. Consult qualified astrologers for life decisions.</p>
     </footer>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="/static/chart-renderer.js"></script>
     <script src="/static/app.js"></script>
 </body>
