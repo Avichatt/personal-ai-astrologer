@@ -1,0 +1,17 @@
+fastapi[standard]>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.9
+pydantic-settings>=2.5
+sqlalchemy[asyncio]>=2.0.35
+asyncpg>=0.30
+alembic>=1.14
+redis>=5.2
+celery[redis]>=5.4
+passlib[bcrypt]>=1.7
+python-jose[cryptography]>=3.3
+httpx>=0.28
+pyswisseph>=2.10
+timezonefinder>=6.5
+python-multipart>=0.0.9
+structlog>=24.4
+google-generativeai>=0.8.0

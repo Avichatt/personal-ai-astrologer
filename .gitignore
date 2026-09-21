@@ -1,0 +1,61 @@
+# ── Python ──────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual Environments ───────
+.venv/
+venv/
+env/
+
+# ── IDE ────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Environment ────────────────
+.env
+.env.local
+.env.production
+
+# ── Testing ────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── Database ───────────────────
+*.db
+*.sqlite3
+
+# ── Ephemeris data ─────────────
+*.se1
+ephe/
+
+# ── Storage / Generated ───────
+storage/
+*.pdf
+*.mp3
+*.wav
+
+# ── Docker ─────────────────────
+docker-compose.override.yml
+
+# ── OS ─────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ───────────────────────
+*.log
+logs/
+
+# ── Ruff ───────────────────────
+.ruff_cache/
