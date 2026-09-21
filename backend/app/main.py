@@ -4,13 +4,18 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import api_router
+
+# Resolve the frontend directory path relative to this file
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 from app.config.logging_config import configure_logging, get_logger
 from app.config.settings import get_settings
 from app.database.connection import engine
@@ -119,6 +124,15 @@ def create_app() -> FastAPI:
 
     # ── Routers ──────────────────────────────────
     app.include_router(api_router)
+
+    # ── Frontend (Static Files + SPA Root) ──────
+    if FRONTEND_DIR.is_dir():
+        app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+        @app.get("/", include_in_schema=False)
+        async def serve_frontend() -> FileResponse:
+            """Serve the frontend SPA."""
+            return FileResponse(str(FRONTEND_DIR / "index.html"))
 
     return app
 

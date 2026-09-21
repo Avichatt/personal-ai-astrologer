@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal AI Astrologer — Celestial Insights</title>
+    <meta name="description" content="Professional AI-powered astrological analysis using Vedic, KP (Krishnamurti Paddhati), and Western astrology systems. Get your complete birth-to-death life blueprint.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- Animated Background Particles                      -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <canvas id="star-canvas"></canvas>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- Header                                             -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="20" cy="20" r="18" stroke="url(#logoGrad)" stroke-width="2"/>
+                        <circle cx="20" cy="20" r="3" fill="url(#logoGrad)"/>
+                        <ellipse cx="20" cy="20" rx="10" ry="18" stroke="url(#logoGrad)" stroke-width="1.2" opacity="0.6" transform="rotate(30 20 20)"/>
+                        <ellipse cx="20" cy="20" rx="10" ry="18" stroke="url(#logoGrad)" stroke-width="1.2" opacity="0.6" transform="rotate(-30 20 20)"/>
+                        <defs>
+                            <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
+                                <stop stop-color="#a78bfa"/>
+                                <stop offset="1" stop-color="#f59e0b"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="logo-title">AI Astrologer</h1>
+                    <p class="logo-subtitle">Celestial Intelligence</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- Main Content                                       -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main class="main-content">
+
+        <!-- ── Step 1: System Selection ──────────────── -->
+        <section id="step-system" class="step-section active-step">
+            <div class="step-header">
+                <span class="step-badge">Step 1</span>
+                <h2>Choose Your Astrological System</h2>
+                <p class="step-desc">Each system offers a unique lens into your celestial blueprint</p>
+            </div>
+
+            <div class="system-cards" id="system-cards">
+                <button class="system-card" data-system="vedic" id="btn-vedic">
+                    <div class="card-glow vedic-glow"></div>
+                    <div class="card-icon">🕉️</div>
+                    <h3>Vedic (Jyotish)</h3>
+                    <p class="card-tagline">Parashari • Sidereal • Dasha</p>
+                    <ul class="card-features">
+                        <li>Sidereal zodiac with Lahiri Ayanamsa</li>
+                        <li>Vimshottari Dasha timeline</li>
+                        <li>Yogas, Doshas & Remedies</li>
+                        <li>Gemstone prescriptions</li>
+                    </ul>
+                    <div class="card-selected-badge">✓ Selected</div>
+                </button>
+
+                <button class="system-card" data-system="kp" id="btn-kp">
+                    <div class="card-glow kp-glow"></div>
+                    <div class="card-icon">🔬</div>
+                    <h3>KP (Krishnamurti)</h3>
+                    <p class="card-tagline">Sub-Lord • Significator • Ruling Planets</p>
+                    <ul class="card-features">
+                        <li>249-position Sub-lord system</li>
+                        <li>4-level Significator theory</li>
+                        <li>Precise event timing (hours)</li>
+                        <li>Placidus house system</li>
+                    </ul>
+                    <div class="card-selected-badge">✓ Selected</div>
+                </button>
+
+                <button class="system-card" data-system="western" id="btn-western">
+                    <div class="card-glow western-glow"></div>
+                    <div class="card-icon">♈</div>
+                    <h3>Western (Tropical)</h3>
+                    <p class="card-tagline">Tropical • Aspects • Progressions</p>
+                    <ul class="card-features">
+                        <li>Tropical zodiac (season-based)</li>
+                        <li>Ptolemaic & minor aspects</li>
+                        <li>Element & modality balance</li>
+                        <li>Psychological profiling</li>
+                    </ul>
+                    <div class="card-selected-badge">✓ Selected</div>
+                </button>
+            </div>
+        </section>
+
+        <!-- ── Step 2: Birth Details ─────────────────── -->
+        <section id="step-details" class="step-section">
+            <div class="step-header">
+                <span class="step-badge">Step 2</span>
+                <h2>Enter Your Birth Details</h2>
+                <p class="step-desc">Precision matters — exact time enhances accuracy</p>
+            </div>
+
+            <form id="birth-form" class="birth-form glass-panel">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="input-name">Full Name</label>
+                        <input type="text" id="input-name" placeholder="e.g., Arjuna Sharma" value="Native" required>
+                    </div>
+                </div>
+
+                <div class="form-row form-row-3">
+                    <div class="form-group">
+                        <label for="input-date">Date of Birth</label>
+                        <input type="date" id="input-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-time">Time of Birth</label>
+                        <input type="time" id="input-time" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-timezone">Timezone (UTC offset)</label>
+                        <select id="input-timezone">
+                            <option value="-12">UTC-12:00</option>
+                            <option value="-11">UTC-11:00</option>
+                            <option value="-10">UTC-10:00</option>
+                            <option value="-9">UTC-09:00</option>
+                            <option value="-8">UTC-08:00 (PST)</option>
+                            <option value="-7">UTC-07:00 (MST)</option>
+                            <option value="-6">UTC-06:00 (CST)</option>
+                            <option value="-5">UTC-05:00 (EST)</option>
+                            <option value="-4">UTC-04:00</option>
+                            <option value="-3">UTC-03:00</option>
+                            <option value="-2">UTC-02:00</option>
+                            <option value="-1">UTC-01:00</option>
+                            <option value="0">UTC+00:00 (GMT)</option>
+                            <option value="1">UTC+01:00 (CET)</option>
+                            <option value="2">UTC+02:00 (EET)</option>
+                            <option value="3">UTC+03:00</option>
+                            <option value="3.5">UTC+03:30 (Iran)</option>
+                            <option value="4">UTC+04:00</option>
+                            <option value="4.5">UTC+04:30</option>
+                            <option value="5">UTC+05:00</option>
+                            <option value="5.5" selected>UTC+05:30 (IST)</option>
+                            <option value="5.75">UTC+05:45 (Nepal)</option>
+                            <option value="6">UTC+06:00</option>
+                            <option value="6.5">UTC+06:30</option>
+                            <option value="7">UTC+07:00</option>
+                            <option value="8">UTC+08:00 (CST/SGT)</option>
+                            <option value="9">UTC+09:00 (JST/KST)</option>
+                            <option value="9.5">UTC+09:30 (ACST)</option>
+                            <option value="10">UTC+10:00 (AEST)</option>
+                            <option value="11">UTC+11:00</option>
+                            <option value="12">UTC+12:00 (NZST)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row form-row-2">
+                    <div class="form-group">
+                        <label for="input-latitude">Latitude</label>
+                        <input type="number" id="input-latitude" step="0.0001" min="-90" max="90" placeholder="e.g., 28.6139" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-longitude">Longitude</label>
+                        <input type="number" id="input-longitude" step="0.0001" min="-180" max="180" placeholder="e.g., 77.2090" required>
+                    </div>
+                </div>
+
+                <div class="form-row form-row-2" id="system-specific-options">
+                    <div class="form-group" id="ayanamsa-group">
+                        <label for="input-ayanamsa">Ayanamsa</label>
+                        <select id="input-ayanamsa">
+                            <option value="lahiri" selected>Lahiri (Standard)</option>
+                            <option value="raman">Raman</option>
+                            <option value="krishnamurti">Krishnamurti (KP)</option>
+                            <option value="fagan_bradley">Fagan-Bradley</option>
+                            <option value="true_citra">True Citra</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="house-system-group">
+                        <label for="input-house-system">House System</label>
+                        <select id="input-house-system">
+                            <option value="placidus" selected>Placidus</option>
+                            <option value="whole_sign">Whole Sign</option>
+                            <option value="equal">Equal</option>
+                            <option value="koch">Koch</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="input-focus">Analysis Focus</label>
+                        <select id="input-focus">
+                            <option value="life_blueprint" selected>🌌 Complete Life Blueprint (Birth → Death)</option>
+                            <option value="career">💼 Career & Profession</option>
+                            <option value="love">❤️ Love & Relationships</option>
+                            <option value="health">🏥 Health & Wellness</option>
+                            <option value="finance">💰 Finance & Wealth</option>
+                            <option value="spiritual">🧘 Spiritual Growth</option>
+                            <option value="general">📊 General Overview</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" id="btn-back-step1">
+                        ← Back
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btn-generate">
+                        <span class="btn-text">Generate Horoscope</span>
+                        <span class="btn-loader" style="display:none;">
+                            <span class="spinner"></span> Consulting the Stars…
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ── Step 3: Results ───────────────────────── -->
+        <section id="step-results" class="step-section">
+            <div class="step-header">
+                <span class="step-badge">Results</span>
+                <h2 id="results-title">Your Celestial Blueprint</h2>
+                <p class="step-desc" id="results-subtitle"></p>
+            </div>
+
+            <div class="results-actions">
+                <button class="btn btn-ghost" id="btn-new-reading">← New Reading</button>
+                <button class="btn btn-secondary" id="btn-download">📄 Download Report</button>
+            </div>
+
+            <!-- Quick Stats Bar -->
+            <div class="quick-stats glass-panel" id="quick-stats">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Chart Visualization -->
+            <div class="chart-container glass-panel" id="chart-container">
+                <h3 class="chart-title" id="chart-viz-title">Birth Chart</h3>
+                <canvas id="chart-canvas" width="600" height="600"></canvas>
+            </div>
+
+            <!-- Analysis Sections -->
+            <div id="analysis-sections" class="analysis-sections">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Timeline -->
+            <div id="timeline-container" class="timeline-container glass-panel" style="display:none;">
+                <h3>📅 Timeline & Predictions</h3>
+                <div id="timeline-items"></div>
+            </div>
+
+            <!-- Life Stages -->
+            <div id="life-stages-container" class="life-stages-container" style="display:none;">
+                <h3>🌌 Life Stages — Birth to Beyond</h3>
+                <div id="life-stages-items"></div>
+            </div>
+
+            <!-- Gemstones -->
+            <div id="gemstones-container" class="gemstones-container glass-panel" style="display:none;">
+                <h3>💎 Gemstone Prescriptions</h3>
+                <div id="gemstone-items"></div>
+            </div>
+
+            <!-- Remedies -->
+            <div id="remedies-container" class="remedies-container glass-panel" style="display:none;">
+                <h3>🙏 Spiritual Remedies</h3>
+                <div id="remedy-items"></div>
+            </div>
+
+            <!-- Full Formatted Reading -->
+            <div class="formatted-reading glass-panel" id="formatted-reading-container">
+                <h3>📜 Full Reading</h3>
+                <div id="formatted-reading" class="reading-text"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- Footer                                             -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <footer class="app-footer">
+        <p>Personal AI Astrologer • Powered by Swiss Ephemeris & Gemini AI</p>
+        <p class="footer-disclaimer">For educational and entertainment purposes. Consult qualified astrologers for life decisions.</p>
+    </footer>
+
+    <script src="/static/chart-renderer.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
