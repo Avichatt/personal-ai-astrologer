@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-import uuid
+from datetime import datetime, timezone
 from typing import Annotated, Any
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
+from app.astrology.timezone import timezone_engine
 from app.database.models.user import User
 from app.schemas.chart import (
     ChartCreateRequest,
@@ -31,11 +34,109 @@ async def calculate_ephemeral_chart(
     req: EphemeralCalculateRequest,
     service: Annotated[ChartService, Depends(get_chart_service)],
 ) -> dict[str, Any]:
-    """
-    Perform on-demand astronomical & astrological calculations without saving to database.
-    Open to authenticated and unauthenticated exploratory requests.
-    """
+    """Perform on-demand astronomical & astrological calculations without saving to database."""
     return service.calculate_ephemeral(req)
+
+
+def format_decimal_coordinates(lat: float, lon: float) -> str:
+    """Format coordinates as Decimal Coordinates with direction: e.g. 23.65° N, 88.13° E."""
+    lat_dir = "N" if lat >= 0 else "S"
+    lon_dir = "E" if lon >= 0 else "W"
+    return f"{abs(lat):.2f}° {lat_dir}, {abs(lon):.2f}° {lon_dir}"
+
+
+@router.get("/geo-search")
+async def search_places(
+    q: str = Query(..., min_length=2, description="Place or city name to search"),
+) -> list[dict[str, Any]]:
+    """Search global places/cities using OpenStreetMap Nominatim with formatted decimal coordinates."""
+    url = "https://nominatim.openstreetmap.org/search"
+    headers = {
+        "User-Agent": "PersonalAIAstrologer/1.0 (celestial-engine@antigravity.ai)",
+        "Accept": "application/json",
+    }
+    params = {
+        "q": q,
+        "format": "jsonv2",
+        "limit": 6,
+        "addressdetails": 1,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url, params=params, headers=headers)
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+    except Exception:
+        return []
+
+    results = []
+    for item in data:
+        try:
+            lat = float(item["lat"])
+            lon = float(item["lon"])
+            name = item.get("display_name", "")
+            # Clean up short name
+            parts = [p.strip() for p in name.split(",") if p.strip()]
+            short_name = ", ".join(parts[:3]) if len(parts) >= 3 else name
+            results.append({
+                "display_name": name,
+                "short_name": short_name,
+                "latitude": round(lat, 4),
+                "longitude": round(lon, 4),
+                "latitude_formatted": f"{abs(lat):.2f}° {'N' if lat >= 0 else 'S'}",
+                "longitude_formatted": f"{abs(lon):.2f}° {'E' if lon >= 0 else 'W'}",
+                "formatted_coordinates": format_decimal_coordinates(lat, lon),
+            })
+        except (KeyError, ValueError):
+            continue
+
+    return results
+
+
+@router.get("/timezone-lookup")
+async def lookup_timezone(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    date_str: str | None = Query(None, alias="date"),
+    time_str: str | None = Query(None, alias="time"),
+) -> dict[str, Any]:
+    """Resolve IANA timezone and UTC offset for precise astronomical calculation."""
+    tz_name = timezone_engine.find_timezone(latitude=latitude, longitude=longitude)
+
+    # Calculate UTC offset
+    from zoneinfo import ZoneInfo
+    now_dt = datetime.now(timezone.utc)
+    if date_str:
+        try:
+            from datetime import date as dt_date, time as dt_time
+            d = dt_date.fromisoformat(date_str)
+            t = dt_time.fromisoformat(time_str) if time_str else dt_time(12, 0)
+            now_dt = datetime.combine(d, t, tzinfo=timezone.utc)
+        except Exception:
+            pass
+
+    try:
+        tz = ZoneInfo(tz_name)
+        aware_dt = now_dt.astimezone(tz)
+        utcoffset = aware_dt.utcoffset()
+        offset_seconds = utcoffset.total_seconds() if utcoffset else 0
+        offset_hours = round(offset_seconds / 3600.0, 2)
+        sign = "+" if offset_hours >= 0 else "-"
+        abs_hrs = int(abs(offset_hours))
+        abs_mins = int((abs(offset_hours) - abs_hrs) * 60)
+        offset_str = f"UTC{sign}{abs_hrs:02d}:{abs_mins:02d}"
+    except Exception:
+        offset_hours = 0.0
+        offset_str = "UTC+00:00"
+
+    return {
+        "timezone": tz_name,
+        "utc_offset": offset_hours,
+        "offset_string": offset_str,
+        "formatted_coordinates": format_decimal_coordinates(latitude, longitude),
+    }
 
 
 @router.post("", response_model=NatalChartResponse, status_code=status.HTTP_201_CREATED)
